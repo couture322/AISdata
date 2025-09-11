@@ -1,0 +1,143 @@
+---
+title: "Gulfstream AIS"
+output: html_document
+date: "2025-09-03"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(terra)
+library(sf)
+library(lubridate)
+
+```
+
+
+Data were pulled from the [NOAA Marine Cadastre hub](https://hub.marinecadastre.gov/pages/vesseltraffic), which provides up-to-date AIS data for the U.S. in various forms. We only needed annual vessel counts by cell in a small region so the bulk download option was sufficient. Vessel tracks data provides locations, vessel types, and dates we can use to aggregate by month.
+
+```{r AISdat}
+
+gsExt<-ext(-84,-78,23,27) ##(xmin, xmax, ymin, ymax)
+
+```
+
+### Crop large dataset to Gulf Stream area
+
+```{r}
+
+### VESSEL TRACKS DATA
+# vtd<-st_read("data/AISVesselTracks2021.gpkg") ### change for each year
+# vtd<-st_read(dsn = "data/AISVesselTracks2019.gdb")
+ 
+ 
+# gsBB<-st_bbox(c(xmin=-84,xmax=-78,ymin=23,ymax=27),crs = crs(vtd)) ##(xmin, xmax, ymin, ymax)
+
+# now()
+# # # vtdFl<-st_intersection(vtd,st_as_sfc(gsBB))
+# intsct<-st_intersects(vtd,st_as_sfc(gsBB))
+# vtdFl <- vtd[lengths(intsct) > 0,]
+# now() # 2023 & 2022 data took ~50min-1hr to complete the intersects call
+# write_sf(vtdFl,"outputs/gsTracks/aisTracksGskeys19.shp") ### change for each year
+
+```
+
+### Pull in inputs
+
+```{r}
+
+vtdFl<-st_read("outputs/gsTracks/aisTracksGskeys24.shp")%>% ### change for each year
+  mutate(month=month(TrckStT))%>%
+  select(month,VsslGrp)
+
+# vtdFl$month<-month(vtdFl$TrckStT)
+
+### create empty raster with same geometry as the data
+
+# gsr<-rast(ext=gsExt,crs=crs(vtdFl),resolution=0.001)
+gsr<-rast(ext=gsExt,crs=crs(vtdFl),resolution=0.01)
+
+### separate df into separate by vessel group
+
+# vGrps<-unique(vtdFl$VsslGrp)
+vGrps<-c("Cargo","Fishing","Other","Passenger","Pleasure Craft/Sailing","Tanker","TugTow")
+
+```
+
+### rasterize tracks by month (j) and type (i)
+
+```{r}
+start<-now()
+for (i in 1:length(vGrps)){ #
+  
+  for(j in 1:12){
+  
+  subDf<-vtdFl%>%
+    filter(VsslGrp==vGrps[i],
+           month==j)
+  
+  tmpR<-rasterizeGeom(vect(subDf),gsr,fun="count")
+  
+  # assign(paste0("rast",i),tmpR)
+  if(j==1){
+    monStk<-tmpR
+    } else {
+      monStk<-c(monStk,tmpR)
+  }
+  
+  print(j)
+  
+  }
+  
+  print(vGrps[i])
+  
+  if(i==1){
+    typStk<-mean(monStk)
+    } else {
+      typStk<-c(typStk,mean(monStk))
+      }
+  
+}
+
+end_time <- now()
+run_time <- end_time - start
+
+###
+names(typStk)<-vGrps
+# writeRaster(typStk,"outputs/aisOut/oneKm/aisMonAveType2024.tif")
+
+```
+
+### Take average monthly across years and type
+
+```{r}
+
+ais24<-rast("outputs/aisOut/oneKm/aisMonAveType2024.tif")
+ais23<-rast("outputs/aisOut/oneKm/aisMonAveType2023.tif")
+ais22<-rast("outputs/aisOut/oneKm/aisMonAveType2022.tif")
+ais21<-rast("outputs/aisOut/oneKm/aisMonAveType2021.tif")
+ais19<-rast("outputs/aisOut/oneKm/aisMonAveType2019.tif")
+
+
+### Pull in monthly aves to calculate monthly aves over all 5 years
+
+for(i in 1:length(vGrps)){
+  
+  vtStk<-c(ais24[[i]],ais23[[i]],ais22[[i]],ais21[[i]],ais19[[i]])
+  
+  
+  if(i==1){
+    outStk<-mean(vtStk)
+    } else {
+      outStk<-c(outStk,mean(vtStk))
+      }
+  
+}
+
+# names(outStk)<-names(ais24)
+# writeRaster(outStk,"outputs/aisOut/oneKm/aisCountsByType.tif")
+
+
+```
+
