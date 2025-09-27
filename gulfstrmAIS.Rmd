@@ -47,7 +47,7 @@ gsExt<-ext(-84,-78,23,27) ##(xmin, xmax, ymin, ymax)
 
 ```{r}
 
-vtdFl<-st_read("outputs/gsTracks/aisTracksGskeys24.shp")%>% ### change for each year
+vtdFl<-st_read("outputs/gsTracks/aisTracksGskeys19.shp")%>% ### change for each year
   mutate(month=month(TrckStT))%>%
   select(month,VsslGrp)
 
@@ -55,8 +55,8 @@ vtdFl<-st_read("outputs/gsTracks/aisTracksGskeys24.shp")%>% ### change for each 
 
 ### create empty raster with same geometry as the data
 
-# gsr<-rast(ext=gsExt,crs=crs(vtdFl),resolution=0.001)
-gsr<-rast(ext=gsExt,crs=crs(vtdFl),resolution=0.01)
+gsr<-rast(ext=gsExt,crs=crs(vtdFl),resolution=0.001)
+# gsr<-rast(ext=gsExt,crs=crs(vtdFl),resolution=0.01)
 
 ### separate df into separate by vessel group
 
@@ -105,7 +105,7 @@ run_time <- end_time - start
 
 ###
 names(typStk)<-vGrps
-# writeRaster(typStk,"outputs/aisOut/oneKm/aisMonAveType2024.tif")
+# writeRaster(typStk,"outputs/aisOut/aisMonAveType2019.tif",overwrite=TRUE)
 
 ```
 
@@ -113,11 +113,11 @@ names(typStk)<-vGrps
 
 ```{r}
 
-ais24<-rast("outputs/aisOut/oneKm/aisMonAveType2024.tif")
-ais23<-rast("outputs/aisOut/oneKm/aisMonAveType2023.tif")
-ais22<-rast("outputs/aisOut/oneKm/aisMonAveType2022.tif")
-ais21<-rast("outputs/aisOut/oneKm/aisMonAveType2021.tif")
-ais19<-rast("outputs/aisOut/oneKm/aisMonAveType2019.tif")
+ais24<-rast("outputs/aisOut/aisMonAveType2024.tif")
+ais23<-rast("outputs/aisOut/aisMonAveType2023.tif")
+ais22<-rast("outputs/aisOut/aisMonAveType2022.tif")
+ais21<-rast("outputs/aisOut/aisMonAveType2021.tif")
+ais19<-rast("outputs/aisOut/aisMonAveType2019.tif")
 
 
 ### Pull in monthly aves to calculate monthly aves over all 5 years
@@ -135,8 +135,8 @@ for(i in 1:length(vGrps)){
   
 }
 
-# names(outStk)<-names(ais24)
-# writeRaster(outStk,"outputs/aisOut/oneKm/aisCountsByType.tif")
+names(outStk)<-names(ais24)
+# writeRaster(outStk,"outputs/aisOut/aisCountsByType.tif")
 
 
 ```
